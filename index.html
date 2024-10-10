@@ -110,6 +110,7 @@
   <div class="container">
     <div class="main-content">
       <h1>Triad Quiz Game</h1>
+      <p>This game helps you practice identifying the four types of triads. If a chord doesn't match the spelling of any of these types, consider choosing a different root note.</p>
       
       <div class="options">
         <h2>Select Triad Types:</h2>
@@ -121,9 +122,10 @@
       
       <div class="options">
         <h2>Select Inversions:</h2>
-        <label><input type="radio" name="inversion" value="root" checked> Only Root Positions</label>
-        <label><input type="radio" name="inversion" value="closed"> Standard Closed Voicings</label>
-        <label><input type="radio" name="inversion" value="all"> All Inversions</label>
+        <label><input type="radio" name="inversion" value="root" checked> Only Root Position</label>
+        <label><input type="radio" name="inversion" value="standard"> Standard Inversions</label>
+        <label><input type="radio" name="inversion" value="spread"> Spread Voicings</label>
+        <label><input type="radio" name="inversion" value="all"> All Voicings</label>
       </div>
       
       <div class="options">
@@ -214,38 +216,37 @@
         const permutations = [];
         const inversions = [];
 
-        // Generate standard closed voicings (root position and inversions)
-        if (inversionType === 'root' || inversionType === 'closed' || inversionType === 'all') {
-          const rootPosition = notes;
-          permutations.push(rootPosition);
+        // Generate permutations based on inversion type
+        if (inversionType === 'root') {
+          permutations.push(notes);
           inversions.push('Root Position');
-
-          if (inversionType !== 'root') {
-            const firstInversion = [notes[1], notes[2], notes[0]];
-            permutations.push(firstInversion);
-            inversions.push('First Inversion');
-
-            const secondInversion = [notes[2], notes[0], notes[1]];
-            permutations.push(secondInversion);
-            inversions.push('Second Inversion');
-          }
-        }
-
-        // Generate all permutations if selected
-        if (inversionType === 'all') {
-          function permute(arr, l, r) {
-            if (l === r) {
-              permutations.push(arr.slice());
+        } else if (inversionType === 'standard') {
+          // Root Position
+          permutations.push(notes);
+          inversions.push('Root Position');
+          // First Inversion
+          permutations.push([notes[1], notes[2], notes[0]]);
+          inversions.push('First Inversion');
+          // Second Inversion
+          permutations.push([notes[2], notes[0], notes[1]]);
+          inversions.push('Second Inversion');
+        } else if (inversionType === 'spread') {
+          // Generate spread voicings
+          const allPermutations = permute(notes);
+          allPermutations.forEach(perm => {
+            if (!isStandardInversion(perm, notes)) {
+              permutations.push(perm);
               inversions.push('Spread Voicing');
-            } else {
-              for (let i = l; i <= r; i++) {
-                [arr[l], arr[i]] = [arr[i], arr[l]];
-                permute(arr, l + 1, r);
-                [arr[l], arr[i]] = [arr[i], arr[l]];
-              }
             }
-          }
-          permute(notes.slice(), 0, notes.length - 1);
+          });
+        } else if (inversionType === 'all') {
+          // All voicings
+          const allPermutations = permute(notes);
+          allPermutations.forEach(perm => {
+            const inversion = getInversionName(perm, notes);
+            permutations.push(perm);
+            inversions.push(inversion);
+          });
         }
 
         // Remove duplicate permutations
@@ -265,6 +266,45 @@
           notes: perm,
           inversion: uniqueInversions[idx]
         }));
+      }
+
+      function permute(arr) {
+        const result = [];
+
+        function generate(n, heapArr) {
+          if (n === 1) {
+            result.push(heapArr.slice());
+          } else {
+            for (let i = 0; i < n; i++) {
+              generate(n - 1, heapArr);
+              const j = n % 2 === 0 ? i : 0;
+              [heapArr[n - 1], heapArr[j]] = [heapArr[j], heapArr[n - 1]];
+            }
+          }
+        }
+
+        generate(arr.length, arr.slice());
+        return result;
+      }
+
+      function isStandardInversion(perm, original) {
+        return (
+          (perm[0] === original[0] && perm[1] === original[1] && perm[2] === original[2]) ||
+          (perm[0] === original[1] && perm[1] === original[2] && perm[2] === original[0]) ||
+          (perm[0] === original[2] && perm[1] === original[0] && perm[2] === original[1])
+        );
+      }
+
+      function getInversionName(perm, original) {
+        if (perm[0] === original[0] && perm[1] === original[1] && perm[2] === original[2]) {
+          return 'Root Position';
+        } else if (perm[0] === original[1] && perm[1] === original[2] && perm[2] === original[0]) {
+          return 'First Inversion';
+        } else if (perm[0] === original[2] && perm[1] === original[0] && perm[2] === original[1]) {
+          return 'Second Inversion';
+        } else {
+          return 'Spread Voicing';
+        }
       }
 
       function initializeQuiz() {
