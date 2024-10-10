@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Triad Quiz Game</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+    }
+    .options {
+      margin-bottom: 20px;
+    }
+    .options label {
+      margin-right: 15px;
+    }
+    #quiz-area {
+      margin-top: 20px;
+    }
+    #quiz-question {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+    }
+    #reveal-button, #correct-button, #wrong-button, #reset-button {
+      margin-right: 10px;
+    }
+    #answer {
+      font-size: 1.5em;
+      margin-bottom: 20px;
+      color: blue;
+    }
+    #progress {
+      margin-top: 20px;
+    }
+    #start-button {
+      margin-top: 20px;
+    }
+    #attribution {
+      margin-top: 40px;
+      font-size: 0.9em;
+      color: gray;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Triad Quiz Game</h1>
+  
+  <div class="options">
+    <h2>Select Triad Types:</h2>
+    <label><input type="checkbox" id="major" checked> Major</label>
+    <label><input type="checkbox" id="minor" checked> Minor</label>
+    <label><input type="checkbox" id="diminished" checked> Diminished</label>
+    <label><input type="checkbox" id="augmented" checked> Augmented</label>
+  </div>
+  
+  <div class="options">
+    <h2>Select Inversions:</h2>
+    <label><input type="radio" name="inversion" value="root" checked> Only Root Positions</label>
+    <label><input type="radio" name="inversion" value="closed"> Standard Closed Voicings</label>
+    <label><input type="radio" name="inversion" value="all"> All Inversions</label>
+  </div>
+  
+  <div class="options">
+    <h2>Select Quiz Mode:</h2>
+    <label><input type="radio" name="mode" value="name" checked> Name the Chord</label>
+    <label><input type="radio" name="mode" value="spell"> Spell the Chord</label>
+  </div>
+  
+  <button id="start-button">Start Quiz</button>
+  
+  <div id="quiz-area" style="display: none;">
+    <div id="quiz-question"></div>
+    <button id="reveal-button">Reveal Answer (Space Bar)</button>
+    <div id="answer" style="display: none;"></div>
+    <button id="correct-button" style="display: none;">I Was Correct ('.' Key)</button>
+    <button id="wrong-button" style="display: none;">I Was Wrong (',' Key)</button>
+    <button id="reset-button">Reset Game</button>
+    <div id="progress"></div>
+  </div>
+  
+  <div id="attribution">
+    Game by Michael Varney
+  </div>
+  
+  <script>
+    (function() {
+      const circleOfFifths = [
+        'C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'
+      ];
+
+      const triadTypes = [
+        { name: 'Major', intervals: [0, 4, 7] },
+        { name: 'Minor', intervals: [0, 3, 7] },
+        { name: 'Diminished', intervals: [0, 3, 6] },
+        { name: 'Augmented', intervals: [0, 4, 8] }
+      ];
+
+      const noteNamesSharps = ['C', 'C#', 'D', 'D#', 'E', 'F',
+                               'F#', 'G', 'G#', 'A', 'A#', 'B'];
+      const noteNamesFlats  = ['C', 'Db', 'D', 'Eb', 'E', 'F',
+                               'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+
+      let quizSet = [];
+      let currentQuestionIndex = 0;
+      let currentQuestion = null;
+      let correctAnswers = 0;
+      let incorrectAttempts = 0;
+      let totalQuestions = 0;
+
+      function getNoteIndex(note) {
+        let index = noteNamesSharps.indexOf(note);
+        if (index === -1) {
+          index = noteNamesFlats.indexOf(note);
+        }
+        return index;
+      }
+
+      function getNoteName(index, useFlats = false) {
+        index = (index + 12) % 12;
+        return useFlats ? noteNamesFlats[index] : noteNamesSharps[index];
+      }
+
+      function useFlats(root) {
+        return ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Cb'].includes(root);
+      }
+
+      function generateTriad(root, intervals) {
+        const rootIndex = getNoteIndex(root);
+        const flats = useFlats(root);
+        const notes = intervals.map(interval => getNoteName(rootIndex + interval, flats));
+        return notes;
+      }
+
+      function generatePermutations(notes, inversionType) {
+        const permutations = [];
+        const inversions = [];
+
+        // Generate standard closed voicings (root position and inversions)
+        if (inversionType === 'root' || inversionType === 'closed' || inversionType === 'all') {
+          const rootPosition = notes;
+          permutations.push(rootPosition);
+          inversions.push('Root Position');
+
+          if (inversionType !== 'root') {
+            const firstInversion = [notes[1], notes[2], notes[0]];
+            permutations.push(firstInversion);
+            inversions.push('First Inversion');
+
+            const secondInversion = [notes[2], notes[0], notes[1]];
+            permutations.push(secondInversion);
+            inversions.push('Second Inversion');
+          }
+        }
+
+        // Generate all permutations if selected
+        if (inversionType === 'all') {
+          function permute(arr, l, r) {
+            if (l === r) {
+              permutations.push(arr.slice());
+              inversions.push('Spread Voicing');
+            } else {
+              for (let i = l; i <= r; i++) {
+                [arr[l], arr[i]] = [arr[i], arr[l]];
+                permute(arr, l + 1, r);
+                [arr[l], arr[i]] = [arr[i], arr[l]];
+              }
+            }
+          }
+          permute(notes.slice(), 0, notes.length - 1);
+        }
+
+        // Remove duplicate permutations
+        const uniquePermutations = [];
+        const uniqueInversions = [];
+        const seen = new Set();
+        for (let i = 0; i < permutations.length; i++) {
+          const key = permutations[i].join('-');
+          if (!seen.has(key)) {
+            seen.add(key);
+            uniquePermutations.push(permutations[i]);
+            uniqueInversions.push(inversions[i]);
+          }
+        }
+
+        return uniquePermutations.map((perm, idx) => ({
+          notes: perm,
+          inversion: uniqueInversions[idx]
+        }));
+      }
+
+      function initializeQuiz() {
+        // Get user selections
+        const selectedTypes = [];
+        if (document.getElementById('major').checked) selectedTypes.push('Major');
+        if (document.getElementById('minor').checked) selectedTypes.push('Minor');
+        if (document.getElementById('diminished').checked) selectedTypes.push('Diminished');
+        if (document.getElementById('augmented').checked) selectedTypes.push('Augmented');
+
+        const inversionRadios = document.getElementsByName('inversion');
+        let inversionType = 'root';
+        for (let radio of inversionRadios) {
+          if (radio.checked) {
+            inversionType = radio.value;
+            break;
+          }
+        }
+
+        const modeRadios = document.getElementsByName('mode');
+        let quizMode = 'name';
+        for (let radio of modeRadios) {
+          if (radio.checked) {
+            quizMode = radio.value;
+            break;
+          }
+        }
+
+        // Generate quiz set
+        quizSet = [];
+        circleOfFifths.forEach(root => {
+          const flats = useFlats(root);
+          triadTypes.forEach(triadType => {
+            if (selectedTypes.includes(triadType.name)) {
+              const triadNotes = generateTriad(root, triadType.intervals);
+              const permutations = generatePermutations(triadNotes, inversionType);
+              permutations.forEach(perm => {
+                quizSet.push({
+                  question: perm.notes.join(' – '),
+                  answer: `${root} ${triadType.name} Triad`,
+                  inversion: perm.inversion,
+                  quizMode: quizMode
+                });
+              });
+            }
+          });
+        });
+
+        // Shuffle quiz set
+        quizSet = shuffleArray(quizSet);
+
+        // Initialize counters
+        currentQuestionIndex = 0;
+        correctAnswers = 0;
+        incorrectAttempts = 0;
+        totalQuestions = quizSet.length;
+
+        // Hide start button and show quiz area
+        document.getElementById('start-button').style.display = 'none';
+        document.getElementById('quiz-area').style.display = 'block';
+
+        showNextQuestion();
+      }
+
+      function showNextQuestion() {
+        if (quizSet.length === 0) {
+          // Quiz completed
+          document.getElementById('quiz-question').textContent = 'Quiz Completed!';
+          document.getElementById('reveal-button').style.display = 'none';
+          document.getElementById('correct-button').style.display = 'none';
+          document.getElementById('wrong-button').style.display = 'none';
+          document.getElementById('answer').style.display = 'none';
+          document.getElementById('progress').textContent = `Final Score: ${correctAnswers} Correct, ${incorrectAttempts} Incorrect Attempts`;
+          return;
+        }
+
+        currentQuestion = quizSet[currentQuestionIndex];
+        if (currentQuestion.quizMode === 'name') {
+          document.getElementById('quiz-question').textContent = `What is the chord for: ${currentQuestion.question}?`;
+        } else {
+          document.getElementById('quiz-question').textContent = `Spell the ${currentQuestion.answer} (${currentQuestion.inversion})`;
+        }
+        document.getElementById('answer').style.display = 'none';
+        document.getElementById('correct-button').style.display = 'none';
+        document.getElementById('wrong-button').style.display = 'none';
+        document.getElementById('reveal-button').style.display = 'inline';
+        document.getElementById('progress').textContent = `Correct: ${correctAnswers}, Incorrect Attempts: ${incorrectAttempts}, Remaining Questions: ${quizSet.length}`;
+      }
+
+      function revealAnswer() {
+        if (currentQuestion.quizMode === 'name') {
+          document.getElementById('answer').textContent = `Answer: ${currentQuestion.answer} (${currentQuestion.inversion})`;
+        } else {
+          document.getElementById('answer').textContent = `Answer: ${currentQuestion.question}`;
+        }
+        document.getElementById('answer').style.display = 'block';
+        document.getElementById('correct-button').style.display = 'inline';
+        document.getElementById('wrong-button').style.display = 'inline';
+        document.getElementById('reveal-button').style.display = 'none';
+      }
+
+      function handleCorrect() {
+        correctAnswers++;
+        quizSet.splice(currentQuestionIndex, 1);
+        if (currentQuestionIndex >= quizSet.length) {
+          currentQuestionIndex = 0;
+        }
+        showNextQuestion();
+      }
+
+      function handleWrong() {
+        incorrectAttempts++;
+        currentQuestionIndex++;
+        if (currentQuestionIndex >= quizSet.length) {
+          currentQuestionIndex = 0;
+        }
+        showNextQuestion();
+      }
+
+      function resetGame() {
+        // Reset the quiz area
+        document.getElementById('quiz-area').style.display = 'none';
+        document.getElementById('start-button').style.display = 'block';
+        document.getElementById('reveal-button').style.display = 'inline';
+        document.getElementById('correct-button').style.display = 'none';
+        document.getElementById('wrong-button').style.display = 'none';
+        document.getElementById('answer').style.display = 'none';
+        document.getElementById('quiz-question').textContent = '';
+        document.getElementById('progress').textContent = '';
+      }
+
+      function shuffleArray(array) {
+        for (let i = array.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [array[i], array[j]] = [array[j], array[i]];
+        }
+        return array;
+      }
+
+      // Event listeners
+      document.getElementById('start-button').addEventListener('click', initializeQuiz);
+      document.getElementById('reveal-button').addEventListener('click', revealAnswer);
+      document.getElementById('correct-button').addEventListener('click', handleCorrect);
+      document.getElementById('wrong-button').addEventListener('click', handleWrong);
+      document.getElementById('reset-button').addEventListener('click', resetGame);
+
+      // Keyboard event listeners
+      document.addEventListener('keydown', function(event) {
+        if (event.key === ' ') {
+          event.preventDefault(); // Prevent scrolling
+          if (document.getElementById('reveal-button').style.display !== 'none') {
+            revealAnswer();
+          }
+        } else if (event.key === '.') {
+          if (document.getElementById('correct-button').style.display !== 'none') {
+            handleCorrect();
+          }
+        } else if (event.key === ',') {
+          if (document.getElementById('wrong-button').style.display !== 'none') {
+            handleWrong();
+          }
+        }
+      });
+
+    })();
+  </script>
+  
+</body>
+</html>
