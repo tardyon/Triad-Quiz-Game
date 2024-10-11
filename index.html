@@ -87,7 +87,9 @@
 
   <div class="container">
     <h1>Triad Quiz Game</h1>
-    <p>This game helps you practice identifying the four types of triads. If a chord doesn't match the spelling of any of these types, consider choosing a different root note.</p>
+    <p>This game helps you practice identifying the four types of triads.</p>
+    <p>If a chord doesn't match the spelling of any of these types, consider choosing a different root note.</p>
+    <p>Any change in option selection requires a "Reset Game" to take effect.</p>
     
     <div class="options">
       <h2>Select Triad Types:</h2>
@@ -99,10 +101,14 @@
     
     <div class="options">
       <h2>Select Inversions:</h2>
-      <label><input type="radio" name="inversion" value="root" checked> Only Root Position</label>
-      <label><input type="radio" name="inversion" value="standard"> Standard Inversions</label>
-      <label><input type="radio" name="inversion" value="spread"> Spread Voicings</label>
-      <label><input type="radio" name="inversion" value="all"> All Voicings</label>
+      <label><input type="checkbox" name="inversion" value="root" checked> Root Inversion</label>
+      <label><input type="checkbox" name="inversion" value="first" checked> First Inversion</label>
+      <label><input type="checkbox" name="inversion" value="second" checked> Second Inversion</label>
+    </div>
+    
+    <div class="options">
+      <h2>Select Voicing:</h2>
+      <label><input type="checkbox" id="spread-voicing"> Spread Voicing</label>
     </div>
     
     <div class="options">
@@ -125,7 +131,7 @@
     
     <div id="footer">
       <p>© 2024 Michael C.M. Varney</p>
-      <p>Version 1.51</p>
+      <p>Version 1.5.1</p>
     </div>
 
     <!-- Missed Questions at the Bottom -->
@@ -147,7 +153,7 @@
         { name: 'Major', formula: ['1', '3', '5'], symmetrical: false },
         { name: 'Minor', formula: ['1', 'b3', '5'], symmetrical: false },
         { name: 'Diminished', formula: ['1', 'b3', 'b5'], symmetrical: false },
-        { name: 'Augmented', formula: ['1', '3', '#5'], symmetrical: true }
+        { name: 'Augmented', formula: ['1', '3', '#5'], symmetrical: false } // Changed to false
       ];
 
       const noteLetters = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
@@ -256,40 +262,31 @@
         return note + '#';
       }
 
-      function generatePermutations(notes, inversionType, isSymmetrical) {
+      function generatePermutations(notes, selectedInversions, spreadVoicing) {
         const permutations = [];
         const inversions = [];
 
-        if (isSymmetrical) {
-          permutations.push(notes);
-          inversions.push('No Inversions (Symmetrical Chord)');
-        } else {
+        selectedInversions.forEach(inversionType => {
           if (inversionType === 'root') {
             permutations.push(notes);
             inversions.push('Root Position');
-          } else if (inversionType === 'standard') {
-            permutations.push(notes);
-            inversions.push('Root Position');
+          } else if (inversionType === 'first') {
             permutations.push([notes[1], notes[2], notes[0]]);
             inversions.push('First Inversion');
+          } else if (inversionType === 'second') {
             permutations.push([notes[2], notes[0], notes[1]]);
             inversions.push('Second Inversion');
-          } else if (inversionType === 'spread') {
-            const allPermutations = permute(notes);
-            allPermutations.forEach(perm => {
-              if (!isStandardInversion(perm, notes)) {
-                permutations.push(perm);
-                inversions.push('Spread Voicing');
-              }
-            });
-          } else if (inversionType === 'all') {
-            const allPermutations = permute(notes);
-            allPermutations.forEach(perm => {
-              const inversion = getInversionName(perm, notes);
-              permutations.push(perm);
-              inversions.push(inversion);
-            });
           }
+        });
+
+        if (spreadVoicing) {
+          const spreadPermutations = permute(notes);
+          spreadPermutations.forEach(perm => {
+            if (!isStandardInversion(perm, notes)) {
+              permutations.push(perm);
+              inversions.push('Spread Voicing');
+            }
+          });
         }
 
         // Remove duplicate permutations
@@ -338,18 +335,6 @@
         );
       }
 
-      function getInversionName(perm, original) {
-        if (perm[0] === original[0] && perm[1] === original[1] && perm[2] === original[2]) {
-          return 'Root Position';
-        } else if (perm[0] === original[1] && perm[1] === original[2] && perm[2] === original[0]) {
-          return 'First Inversion';
-        } else if (perm[0] === original[2] && perm[1] === original[0] && perm[2] === original[1]) {
-          return 'Second Inversion';
-        } else {
-          return 'Spread Voicing';
-        }
-      }
-
       function initializeQuiz() {
         const selectedTypes = [];
         if (document.getElementById('major').checked) selectedTypes.push('Major');
@@ -357,14 +342,10 @@
         if (document.getElementById('diminished').checked) selectedTypes.push('Diminished');
         if (document.getElementById('augmented').checked) selectedTypes.push('Augmented');
 
-        const inversionRadios = document.getElementsByName('inversion');
-        let inversionType = 'root';
-        for (let radio of inversionRadios) {
-          if (radio.checked) {
-            inversionType = radio.value;
-            break;
-          }
-        }
+        const inversionCheckboxes = document.querySelectorAll('input[name="inversion"]:checked');
+        const selectedInversions = Array.from(inversionCheckboxes).map(cb => cb.value);
+
+        const spreadVoicing = document.getElementById('spread-voicing').checked;
 
         const modeRadios = document.getElementsByName('mode');
         let quizMode = 'name';
@@ -382,16 +363,15 @@
             if (selectedTypes.includes(triadType.name)) {
               const triadNotes = generateTriad(root, triadType.formula);
               if (!triadNotes) return;
-              const permutations = generatePermutations(triadNotes, inversionType, triadType.symmetrical);
+              const permutations = generatePermutations(triadNotes, selectedInversions, spreadVoicing);
               permutations.forEach(perm => {
-                const questionKey = quizMode === 'name' ? perm.notes.join(' – ') : `${root} ${triadType.name} Triad (${perm.inversion})`;
+                const questionKey = quizMode === 'name' ? perm.notes.join(' – ') : `${root} ${triadType.name} Triad (${perm.inversion})`;
                 quizSet.push({
-                  question: perm.notes.join(' – '),
+                  question: perm.notes.join(' – '),
                   answer: `${root} ${triadType.name} Triad`,
                   inversion: perm.inversion,
                   quizMode: quizMode,
                   key: questionKey,
-                  isSymmetrical: triadType.symmetrical,
                   notes: perm.notes // Store notes for augmented triads
                 });
               });
@@ -434,7 +414,7 @@
         if (currentQuestion.quizMode === 'name') {
           document.getElementById('quiz-question').textContent = `What is the chord for: ${currentQuestion.question}?`;
         } else {
-          document.getElementById('quiz-question').textContent = `Spell the ${currentQuestion.answer}${currentQuestion.isSymmetrical ? '' : ' (' + currentQuestion.inversion + ')'}`;
+          document.getElementById('quiz-question').textContent = `Spell the ${currentQuestion.answer} (${currentQuestion.inversion})`;
         }
         document.getElementById('answer').style.display = 'none';
         document.getElementById('correct-button').style.display = 'none';
@@ -444,20 +424,10 @@
       }
 
       function revealAnswer() {
-        let inversionInfo = '';
-        if (currentQuestion.isSymmetrical) {
-          inversionInfo = 'Note: Augmented triads are symmetrical and have no inversions.';
-        } else {
-          inversionInfo = `(${currentQuestion.inversion})`;
-        }
+        const inversionInfo = `(${currentQuestion.inversion})`;
 
         if (currentQuestion.quizMode === 'name') {
-          if (currentQuestion.isSymmetrical) {
-            const rootNotes = currentQuestion.notes.join(', ');
-            document.getElementById('answer').textContent = `Answer: ${rootNotes} Augmented Triad. ${inversionInfo}`;
-          } else {
-            document.getElementById('answer').textContent = `Answer: ${currentQuestion.answer} ${inversionInfo}`;
-          }
+          document.getElementById('answer').textContent = `Answer: ${currentQuestion.answer} ${inversionInfo}`;
         } else {
           document.getElementById('answer').textContent = `Answer: ${currentQuestion.question} ${inversionInfo}`;
         }
