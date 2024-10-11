@@ -7,7 +7,7 @@
     body {
       font-family: Arial, sans-serif;
       background-color: #f4f4f4;
-      text-align: center; /* Center all text */
+      text-align: center;
       margin: 0;
       padding: 0;
     }
@@ -26,17 +26,17 @@
       margin-top: 20px;
     }
     #quiz-question {
-      font-size: 3em; /* Large font size */
+      font-size: 3em;
       margin-bottom: 30px;
     }
     #reveal-button, #correct-button, #wrong-button, #reset-button {
       margin: 10px;
-      padding: 20px 30px; /* Increased padding for larger buttons */
-      font-size: 1.5em; /* Larger font size */
+      padding: 20px 30px;
+      font-size: 1.5em;
       cursor: pointer;
     }
     #answer {
-      font-size: 2.5em; /* Large font size */
+      font-size: 2.5em;
       margin-bottom: 30px;
       color: blue;
     }
@@ -46,8 +46,8 @@
     }
     #start-button {
       margin-top: 20px;
-      padding: 20px 30px; /* Increased padding for larger button */
-      font-size: 1.5em; /* Larger font size */
+      padding: 20px 30px;
+      font-size: 1.5em;
       cursor: pointer;
     }
     #footer {
@@ -65,7 +65,6 @@
       transform: scale(1.5);
       margin-right: 10px;
     }
-    /* Missed Questions Styles */
     #missed-questions {
       margin-top: 20px;
     }
@@ -87,7 +86,7 @@
 
   <div class="container">
     <h1>Triad Quiz Game</h1>
-    <p>This game helps you practice identifying the four types of triads. If a chord doesn't match the spelling of any of these types, consider choosing a different root note.</p>
+    <p>This game helps you practice identifying the four types of triads. If a chord doesn't match the spelling of any of these types, consider choosing a different root note. Changing game options requires a game reset to take effect.</p>
     
     <div class="options">
       <h2>Select Triad Types:</h2>
@@ -99,10 +98,10 @@
     
     <div class="options">
       <h2>Select Inversions:</h2>
-      <label><input type="radio" name="inversion" value="root" checked> Only Root Position</label>
-      <label><input type="radio" name="inversion" value="standard"> Standard Inversions</label>
-      <label><input type="radio" name="inversion" value="spread"> Spread Voicings</label>
-      <label><input type="radio" name="inversion" value="all"> All Voicings</label>
+      <label><input type="checkbox" id="root" checked> Root Position</label>
+      <label><input type="checkbox" id="first"> First Inversion</label>
+      <label><input type="checkbox" id="second"> Second Inversion</label>
+      <label><input type="checkbox" id="spread"> Spread Voicings</label>
     </div>
     
     <div class="options">
@@ -125,10 +124,9 @@
     
     <div id="footer">
       <p>© 2024 Michael C.M. Varney</p>
-      <p>Version 1.51</p>
+      <p>Version 1.52</p>
     </div>
 
-    <!-- Missed Questions at the Bottom -->
     <div id="missed-questions">
       <h2>Missed Questions</h2>
       <ul id="missed-list"></ul>
@@ -150,60 +148,80 @@
         { name: 'Augmented', formula: ['1', '3', '#5'], symmetrical: true }
       ];
 
-      const noteLetters = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
-
-      const semitoneMap = {
-        'C': 0,
-        'C#': 1,
-        'Db': 1,
-        'D': 2,
-        'D#': 3,
-        'Eb': 3,
-        'E': 4,
-        'F': 5,
-        'F#': 6,
-        'Gb': 6,
-        'G': 7,
-        'G#': 8,
-        'Ab': 8,
-        'A': 9,
-        'A#': 10,
-        'Bb': 10,
-        'B': 11,
-        'Cb': 11
-      };
-
       let quizSet = [];
       let currentQuestionIndex = 0;
-      let currentQuestion = null;
       let correctAnswers = 0;
       let incorrectAttempts = 0;
       let totalQuestions = 0;
       let missedQuestions = {};
 
-      function buildMajorScale(root, useSharps) {
-        const semitones = [0, 2, 4, 5, 7, 9, 11];
-        const scale = [];
-        const rootIndex = noteLetters.indexOf(root.charAt(0));
-        for (let i = 0; i < 7; i++) {
-          const letter = noteLetters[(rootIndex + i) % 7];
-          const midi = (semitoneMap[root] + semitones[i]) % 12;
-          const noteName = findNoteName(letter, midi, useSharps);
-          if (!noteName) return null;
-          scale.push(noteName);
-        }
-        return scale;
-      }
+      function initializeQuiz() {
+        const selectedTypes = [];
+        if (document.getElementById('major').checked) selectedTypes.push('Major');
+        if (document.getElementById('minor').checked) selectedTypes.push('Minor');
+        if (document.getElementById('diminished').checked) selectedTypes.push('Diminished');
+        if (document.getElementById('augmented').checked) selectedTypes.push('Augmented');
 
-      function findNoteName(letter, midi, useSharps) {
-        const accidentals = useSharps ? ['bb', 'b', '', '#', '##'] : ['bb', 'b', '', '#', '##'];
-        for (let accidental of accidentals) {
-          const noteName = letter + accidental;
-          if (semitoneMap[noteName] !== undefined && semitoneMap[noteName] % 12 === midi) {
-            return noteName;
+        if (selectedTypes.length === 0) {
+          alert('Please select at least one triad type!');
+          return;
+        }
+
+        const inversionSelections = [];
+        if (document.getElementById('root').checked) inversionSelections.push('root');
+        if (document.getElementById('first').checked) inversionSelections.push('first');
+        if (document.getElementById('second').checked) inversionSelections.push('second');
+        if (document.getElementById('spread').checked) inversionSelections.push('spread');
+
+        const modeRadios = document.getElementsByName('mode');
+        let quizMode = 'name';
+        for (let radio of modeRadios) {
+          if (radio.checked) {
+            quizMode = radio.value;
+            break;
           }
         }
-        return null;
+
+        quizSet = [];
+        missedQuestions = {};
+        circleOfFifths.forEach(root => {
+          triadTypes.forEach(triadType => {
+            if (selectedTypes.includes(triadType.name)) {
+              const triadNotes = generateTriad(root, triadType.formula);
+              if (!triadNotes) return;
+              inversionSelections.forEach(inversionType => {
+                const permutations = generatePermutations(triadNotes, inversionType, triadType.symmetrical);
+                permutations.forEach(perm => {
+                  const questionKey = quizMode === 'name' ? perm.notes.join(' – ') : `${root} ${triadType.name} Triad (${perm.inversion})`;
+                  quizSet.push({
+                    question: perm.notes.join(' – '),
+                    answer: `${root} ${triadType.name} Triad`,
+                    inversion: perm.inversion,
+                    quizMode: quizMode,
+                    key: questionKey,
+                    isSymmetrical: triadType.symmetrical
+                  });
+                });
+              });
+            }
+          });
+        });
+
+        if (quizSet.length === 0) {
+          alert('No triads available for the selected settings!');
+          return;
+        }
+
+        totalQuestions = quizSet.length;
+        currentQuestionIndex = 0;
+        correctAnswers = 0;
+        incorrectAttempts = 0;
+
+        document.getElementById('start-button').style.display = 'none';
+        document.getElementById('quiz-area').style.display = 'block';
+        document.getElementById('missed-list').innerHTML = '';
+
+        showNextQuestion();
       }
 
       function generateTriad(root, formula) {
@@ -232,7 +250,6 @@
           return note;
         });
 
-        // Verify that we haven't mixed sharps and flats
         const hasSharps = notes.some(n => n.includes('#'));
         const hasFlats = notes.some(n => n.includes('b'));
         if (hasSharps && hasFlats) return null;
@@ -241,7 +258,7 @@
       }
 
       function flattenNote(note) {
-        if (note.endsWith('bb')) return note; // Avoid triple flats
+        if (note.endsWith('bb')) return note;
         if (note.endsWith('b')) return note.replace('b', 'bb');
         if (note.endsWith('#')) return note.slice(0, -1);
         if (note.endsWith('##')) return note.replace('##', '#');
@@ -249,11 +266,41 @@
       }
 
       function sharpenNote(note) {
-        if (note.endsWith('##')) return note; // Avoid triple sharps
+        if (note.endsWith('##')) return note;
         if (note.endsWith('#')) return note.replace('#', '##');
         if (note.endsWith('b')) return note.slice(0, -1);
         if (note.endsWith('bb')) return note.replace('bb', 'b');
         return note + '#';
+      }
+
+      function buildMajorScale(root, useSharps) {
+        const semitones = [0, 2, 4, 5, 7, 9, 11];
+        const scale = [];
+        const rootIndex = 'CDEFGAB'.indexOf(root.charAt(0));
+        for (let i = 0; i < 7; i++) {
+          const letter = 'CDEFGAB'[(rootIndex + i) % 7];
+          const midi = (semitoneMap[root] + semitones[i]) % 12;
+          const noteName = findNoteName(letter, midi, useSharps);
+          if (!noteName) return null;
+          scale.push(noteName);
+        }
+        return scale;
+      }
+
+      const semitoneMap = {
+        'C': 0, 'C#': 1, 'Db': 1, 'D': 2, 'D#': 3, 'Eb': 3, 'E': 4, 'F': 5,
+        'F#': 6, 'Gb': 6, 'G': 7, 'G#': 8, 'Ab': 8, 'A': 9, 'A#': 10, 'Bb': 10, 'B': 11
+      };
+
+      function findNoteName(letter, midi, useSharps) {
+        const accidentals = useSharps ? ['', '#', '##', 'b', 'bb'] : ['bb', 'b', '', '#', '##'];
+        for (let accidental of accidentals) {
+          const noteName = letter + accidental;
+          if (semitoneMap[noteName] !== undefined && semitoneMap[noteName] % 12 === midi) {
+            return noteName;
+          }
+        }
+        return null;
       }
 
       function generatePermutations(notes, inversionType, isSymmetrical) {
@@ -267,14 +314,16 @@
           if (inversionType === 'root') {
             permutations.push(notes);
             inversions.push('Root Position');
-          } else if (inversionType === 'standard') {
-            permutations.push(notes);
-            inversions.push('Root Position');
+          }
+          if (inversionType === 'first') {
             permutations.push([notes[1], notes[2], notes[0]]);
             inversions.push('First Inversion');
+          }
+          if (inversionType === 'second') {
             permutations.push([notes[2], notes[0], notes[1]]);
             inversions.push('Second Inversion');
-          } else if (inversionType === 'spread') {
+          }
+          if (inversionType === 'spread') {
             const allPermutations = permute(notes);
             allPermutations.forEach(perm => {
               if (!isStandardInversion(perm, notes)) {
@@ -282,17 +331,9 @@
                 inversions.push('Spread Voicing');
               }
             });
-          } else if (inversionType === 'all') {
-            const allPermutations = permute(notes);
-            allPermutations.forEach(perm => {
-              const inversion = getInversionName(perm, notes);
-              permutations.push(perm);
-              inversions.push(inversion);
-            });
           }
         }
 
-        // Remove duplicate permutations
         const uniquePermutations = [];
         const uniqueInversions = [];
         const seen = new Set();
@@ -338,87 +379,6 @@
         );
       }
 
-      function getInversionName(perm, original) {
-        if (perm[0] === original[0] && perm[1] === original[1] && perm[2] === original[2]) {
-          return 'Root Position';
-        } else if (perm[0] === original[1] && perm[1] === original[2] && perm[2] === original[0]) {
-          return 'First Inversion';
-        } else if (perm[0] === original[2] && perm[1] === original[0] && perm[2] === original[1]) {
-          return 'Second Inversion';
-        } else {
-          return 'Spread Voicing';
-        }
-      }
-
-      function initializeQuiz() {
-        const selectedTypes = [];
-        if (document.getElementById('major').checked) selectedTypes.push('Major');
-        if (document.getElementById('minor').checked) selectedTypes.push('Minor');
-        if (document.getElementById('diminished').checked) selectedTypes.push('Diminished');
-        if (document.getElementById('augmented').checked) selectedTypes.push('Augmented');
-
-        const inversionRadios = document.getElementsByName('inversion');
-        let inversionType = 'root';
-        for (let radio of inversionRadios) {
-          if (radio.checked) {
-            inversionType = radio.value;
-            break;
-          }
-        }
-
-        const modeRadios = document.getElementsByName('mode');
-        let quizMode = 'name';
-        for (let radio of modeRadios) {
-          if (radio.checked) {
-            quizMode = radio.value;
-            break;
-          }
-        }
-
-        quizSet = [];
-        missedQuestions = {};
-        circleOfFifths.forEach(root => {
-          triadTypes.forEach(triadType => {
-            if (selectedTypes.includes(triadType.name)) {
-              const triadNotes = generateTriad(root, triadType.formula);
-              if (!triadNotes) return;
-              const permutations = generatePermutations(triadNotes, inversionType, triadType.symmetrical);
-              permutations.forEach(perm => {
-                const questionKey = quizMode === 'name' ? perm.notes.join(' – ') : `${root} ${triadType.name} Triad (${perm.inversion})`;
-                quizSet.push({
-                  question: perm.notes.join(' – '),
-                  answer: `${root} ${triadType.name} Triad`,
-                  inversion: perm.inversion,
-                  quizMode: quizMode,
-                  key: questionKey,
-                  isSymmetrical: triadType.symmetrical,
-                  notes: perm.notes // Store notes for augmented triads
-                });
-              });
-            }
-          });
-        });
-
-        // Remove null entries from quizSet
-        quizSet = quizSet.filter(q => q !== null);
-
-        // Shuffle quiz set
-        quizSet = shuffleArray(quizSet);
-
-        // Initialize counters
-        currentQuestionIndex = 0;
-        correctAnswers = 0;
-        incorrectAttempts = 0;
-        totalQuestions = quizSet.length;
-
-        // Hide start button and show quiz area
-        document.getElementById('start-button').style.display = 'none';
-        document.getElementById('quiz-area').style.display = 'block';
-        document.getElementById('missed-list').innerHTML = '';
-
-        showNextQuestion();
-      }
-
       function showNextQuestion() {
         if (quizSet.length === 0) {
           document.getElementById('quiz-question').textContent = 'Quiz Completed!';
@@ -431,11 +391,7 @@
         }
 
         currentQuestion = quizSet[currentQuestionIndex];
-        if (currentQuestion.quizMode === 'name') {
-          document.getElementById('quiz-question').textContent = `What is the chord for: ${currentQuestion.question}?`;
-        } else {
-          document.getElementById('quiz-question').textContent = `Spell the ${currentQuestion.answer}${currentQuestion.isSymmetrical ? '' : ' (' + currentQuestion.inversion + ')'}`;
-        }
+        document.getElementById('quiz-question').textContent = `What is the chord for: ${currentQuestion.question}?`;
         document.getElementById('answer').style.display = 'none';
         document.getElementById('correct-button').style.display = 'none';
         document.getElementById('wrong-button').style.display = 'none';
@@ -444,23 +400,7 @@
       }
 
       function revealAnswer() {
-        let inversionInfo = '';
-        if (currentQuestion.isSymmetrical) {
-          inversionInfo = 'Note: Augmented triads are symmetrical and have no inversions.';
-        } else {
-          inversionInfo = `(${currentQuestion.inversion})`;
-        }
-
-        if (currentQuestion.quizMode === 'name') {
-          if (currentQuestion.isSymmetrical) {
-            const rootNotes = currentQuestion.notes.join(', ');
-            document.getElementById('answer').textContent = `Answer: ${rootNotes} Augmented Triad. ${inversionInfo}`;
-          } else {
-            document.getElementById('answer').textContent = `Answer: ${currentQuestion.answer} ${inversionInfo}`;
-          }
-        } else {
-          document.getElementById('answer').textContent = `Answer: ${currentQuestion.question} ${inversionInfo}`;
-        }
+        document.getElementById('answer').textContent = `Answer: ${currentQuestion.answer} (${currentQuestion.inversion})`;
         document.getElementById('answer').style.display = 'block';
         document.getElementById('correct-button').style.display = 'inline-block';
         document.getElementById('wrong-button').style.display = 'inline-block';
@@ -523,14 +463,12 @@
         return array;
       }
 
-      // Event listeners
       document.getElementById('start-button').addEventListener('click', initializeQuiz);
       document.getElementById('reveal-button').addEventListener('click', revealAnswer);
       document.getElementById('correct-button').addEventListener('click', handleCorrect);
       document.getElementById('wrong-button').addEventListener('click', handleWrong);
       document.getElementById('reset-button').addEventListener('click', resetGame);
 
-      // Keyboard event listeners
       document.addEventListener('keydown', function(event) {
         if (event.key === ' ') {
           event.preventDefault();
