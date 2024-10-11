@@ -130,7 +130,7 @@
       
       <div id="footer">
         <p>© 2024 Michael C.M. Varney</p>
-        <p>Version 1.3</p>
+        <p>Version 1.1</p>
       </div>
 
       <!-- Moved Missed Questions to Bottom -->
@@ -145,20 +145,28 @@
   <script>
     (function() {
       const circleOfFifths = [
-        'C', 'G', 'D', 'A', 'E', 'B', 'F#', 'Db', 'Ab', 'Eb', 'Bb', 'F'
+        'C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#', 'G#', 'D#', 'A#', 'F',
+        'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Cb'
       ];
 
       const triadTypes = [
-        { name: 'Major', intervals: [0, 4, 7], symmetrical: false },
-        { name: 'Minor', intervals: [0, 3, 7], symmetrical: false },
-        { name: 'Diminished', intervals: [0, 3, 6], symmetrical: false },
-        { name: 'Augmented', intervals: [0, 4, 8], symmetrical: true }
+        { name: 'Major', intervals: [0, 4, 7], quality: ['M3', 'P5'], symmetrical: false },
+        { name: 'Minor', intervals: [0, 3, 7], quality: ['m3', 'P5'], symmetrical: false },
+        { name: 'Diminished', intervals: [0, 3, 6], quality: ['m3', 'd5'], symmetrical: false },
+        { name: 'Augmented', intervals: [0, 4, 8], quality: ['M3', 'A5'], symmetrical: true }
       ];
 
-      const noteNamesSharps = ['C', 'C#', 'D', 'D#', 'E', 'F',
-                               'F#', 'G', 'G#', 'A', 'A#', 'B'];
-      const noteNamesFlats  = ['C', 'Db', 'D', 'Eb', 'E', 'F',
-                               'Gb', 'G', 'Ab', 'A', 'Bb', 'B'];
+      const letterOrder = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
+
+      const noteAccidentals = {
+        'C': 0,
+        'D': 0,
+        'E': 0,
+        'F': 0,
+        'G': 0,
+        'A': 0,
+        'B': 0
+      };
 
       let quizSet = [];
       let currentQuestionIndex = 0;
@@ -169,26 +177,102 @@
       let missedQuestions = {};
 
       function getNoteIndex(note) {
-        let index = noteNamesSharps.indexOf(note);
+        let index = noteNames.indexOf(note);
         if (index === -1) {
           index = noteNamesFlats.indexOf(note);
         }
         return index;
       }
 
-      function getNoteName(index, useFlats = false) {
-        index = (index + 12) % 12;
-        return useFlats ? noteNamesFlats[index] : noteNamesSharps[index];
+      function getNoteNameFromMidi(midiNumber) {
+        const index = (midiNumber + 12) % 12;
+        return noteNames[index];
       }
 
-      function useFlats(root) {
-        return ['F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Cb'].includes(root);
+      const noteNames = [
+        'C', 'C#', 'D', 'D#', 'E', 'F',
+        'F#', 'G', 'G#', 'A', 'A#', 'B'
+      ];
+
+      function generateTriadSpelling(root, intervals) {
+        const rootLetter = root.charAt(0);
+        const rootAccidental = root.slice(1);
+        const rootMidi = letterToMidi(rootLetter) + accidentalToSemitones(rootAccidental);
+        const notes = [root];
+        let currentLetterIndex = (letterOrder.indexOf(rootLetter) + 1) % 7;
+
+        for (let i = 1; i < intervals.length; i++) {
+          const intervalSemitones = intervals[i];
+          const expectedLetter = letterOrder[currentLetterIndex];
+          const midiNote = rootMidi + intervalSemitones;
+          const noteOptions = getPossibleSpellings(midiNote, expectedLetter);
+
+          if (noteOptions.length === 0) {
+            console.error(`No possible spelling for midi ${midiNote} as ${expectedLetter}`);
+            return null;
+          }
+
+          notes.push(noteOptions[0]); // Choose the first option
+          currentLetterIndex = (currentLetterIndex + 1) % 7;
+        }
+
+        return notes;
+      }
+
+      function letterToMidi(letter) {
+        switch (letter) {
+          case 'C': return 0;
+          case 'D': return 2;
+          case 'E': return 4;
+          case 'F': return 5;
+          case 'G': return 7;
+          case 'A': return 9;
+          case 'B': return 11;
+          default: return null;
+        }
+      }
+
+      function accidentalToSemitones(accidental) {
+        if (accidental === '#') return 1;
+        if (accidental === '##') return 2;
+        if (accidental === 'b') return -1;
+        if (accidental === 'bb') return -2;
+        return 0;
+      }
+
+      function semitonesToAccidental(semitones) {
+        if (semitones === -2) return 'bb';
+        if (semitones === -1) return 'b';
+        if (semitones === 0) return '';
+        if (semitones === 1) return '#';
+        if (semitones === 2) return '##';
+        if (semitones === 3) return '###';
+        if (semitones === -3) return 'bbb';
+        return '';
+      }
+
+      function getPossibleSpellings(midiNote, expectedLetter) {
+        const expectedMidi = letterToMidi(expectedLetter);
+        const semitoneDifferences = [-2, -1, 0, 1, 2];
+
+        const possibleNotes = semitoneDifferences.map(diff => {
+          const accidental = semitonesToAccidental(diff);
+          const noteName = expectedLetter + accidental;
+          const noteMidi = (letterToMidi(expectedLetter) + accidentalToSemitones(accidental) + 12) % 12;
+          if (noteMidi === (midiNote + 12) % 12) {
+            return noteName;
+          }
+          return null;
+        }).filter(note => note !== null);
+
+        return possibleNotes;
       }
 
       function generateTriad(root, intervals) {
-        const rootIndex = getNoteIndex(root);
-        const flats = useFlats(root);
-        const notes = intervals.map(interval => getNoteName(rootIndex + interval, flats));
+        const notes = generateTriadSpelling(root, intervals);
+        if (!notes) {
+          console.error(`Could not generate triad for root ${root}`);
+        }
         return notes;
       }
 
@@ -323,10 +407,10 @@
         quizSet = [];
         missedQuestions = {};
         circleOfFifths.forEach(root => {
-          const flats = useFlats(root);
           triadTypes.forEach(triadType => {
             if (selectedTypes.includes(triadType.name)) {
               const triadNotes = generateTriad(root, triadType.intervals);
+              if (!triadNotes) return;
               const permutations = generatePermutations(triadNotes, inversionType, triadType.symmetrical);
               permutations.forEach(perm => {
                 const questionKey = quizMode === 'name' ? perm.notes.join(' – ') : `${root} ${triadType.name} Triad (${perm.inversion})`;
