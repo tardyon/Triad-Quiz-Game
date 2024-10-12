@@ -2,7 +2,7 @@
 <html>
 <head>
   <meta charset="UTF-8">
-  <title>Triad Quiz Game</title>
+  <title>Triad Quiz Game v1.5.2</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -86,11 +86,12 @@
 <body>
 
   <div class="container">
-    <h1>Triad Quiz Game</h1>
+    <h1>Triad Quiz Game v1.5.2</h1>
     <p>This game helps you learn and practice identifying the four types of triads.</p>
     <p>If a chord doesn't match the spelling of any of these types, consider choosing a different root note.</p>
     <p>Any change in option selection requires a "Reset Game" to take effect.</p>
     
+    <!-- Triad Types Selection -->
     <div class="options">
       <h2>Select Triad Types:</h2>
       <label><input type="checkbox" id="major" checked> Major</label>
@@ -99,6 +100,7 @@
       <label><input type="checkbox" id="augmented" checked> Augmented</label>
     </div>
     
+    <!-- Inversions Selection -->
     <div class="options">
       <h2>Select Inversions:</h2>
       <label><input type="checkbox" name="inversion" value="root" checked> Root Inversion</label>
@@ -106,19 +108,39 @@
       <label><input type="checkbox" name="inversion" value="second" checked> Second Inversion</label>
     </div>
     
+    <!-- Voicing Selection -->
     <div class="options">
       <h2>Select Voicing:</h2>
       <label><input type="checkbox" id="spread-voicing"> Spread (Open Chord) Voicing</label>
     </div>
     
+    <!-- Quiz Mode Selection -->
     <div class="options">
       <h2>Select Quiz Mode:</h2>
       <label><input type="radio" name="mode" value="name" checked> Name the Chord</label>
       <label><input type="radio" name="mode" value="spell"> Spell the Chord</label>
     </div>
     
+    <!-- Root Note Accidental Selection -->
+    <div class="options">
+      <h2>Select Root Note Accidental:</h2>
+      <label><input type="checkbox" id="sharps"> Sharps (#)</label>
+      <label><input type="checkbox" id="flats"> Flats (b)</label>
+      <!-- New Naturals Checkbox -->
+      <label><input type="checkbox" id="naturals"> Naturals</label>
+    </div>
+    
+    <!-- Root Note Enharmonic Options -->
+    <div class="options">
+      <h2>Select Root Note Enharmonic Options:</h2>
+      <label><input type="checkbox" id="theoretical-enharmonics"> Theoretical Enharmonics</label>
+      <label><input type="checkbox" id="circle-enharmonics"> Follow Circle of Fifths Enharmonic</label>
+    </div>
+    
+    <!-- Start Quiz Button -->
     <button id="start-button">Start Quiz</button>
     
+    <!-- Quiz Area -->
     <div id="quiz-area" style="display: none;">
       <div id="quiz-question"></div>
       <button id="reveal-button">Reveal Answer (Space Bar)</button>
@@ -129,9 +151,10 @@
       <div id="progress"></div>
     </div>
     
+    <!-- Footer -->
     <div id="footer">
       <p>© 2024 Michael C.M. Varney</p>
-      <p>Version 1.5.1</p>
+      <p>Version 1.5.2</p>
     </div>
 
     <!-- Missed Questions at the Bottom -->
@@ -144,16 +167,43 @@
   
   <script>
     (function() {
-      const circleOfFifths = [
-        'C', 'G', 'D', 'A', 'E', 'B', 'F#', 'C#',
-        'F', 'Bb', 'Eb', 'Ab', 'Db', 'Gb', 'Cb'
+      // Updated Root Notes Including Single Accidentals
+      const allRootNotes = [
+        'C', 'C#', 'Db',
+        'D', 'D#', 'Eb',
+        'E', 'Fb',
+        'F', 'F#', 'Gb',
+        'G', 'G#', 'Ab',
+        'A', 'A#', 'Bb',
+        'B', 'Cb'
       ];
+
+      // Theoretical Enharmonics
+      const theoreticalEnharmonics = ['E#', 'Fb', 'B#', 'Cb'];
+
+      // Circle of Fifths Preferred Enharmonics
+      const circleOfFifthsPreferred = {
+        'C#': 'C#',
+        'Db': 'C#', // Prefer C# over Db
+        'D#': 'D#',
+        'Eb': 'D#', // Prefer D# over Eb
+        'F#': 'F#',
+        'Gb': 'F#', // Prefer F# over Gb
+        'G#': 'G#',
+        'Ab': 'G#', // Prefer G# over Ab
+        'A#': 'A#',
+        'Bb': 'A#', // Prefer A# over Bb
+        'Cb': 'B',  // Prefer B over Cb
+        'B#': 'C',  // Prefer C over B#
+        'E#': 'F',  // Prefer F over E#
+        'Fb': 'E'   // Prefer E over Fb
+      };
 
       const triadTypes = [
         { name: 'Major', formula: ['1', '3', '5'], symmetrical: false },
         { name: 'Minor', formula: ['1', 'b3', '5'], symmetrical: false },
         { name: 'Diminished', formula: ['1', 'b3', 'b5'], symmetrical: false },
-        { name: 'Augmented', formula: ['1', '3', '#5'], symmetrical: false } // Changed to false
+        { name: 'Augmented', formula: ['1', '3', '#5'], symmetrical: false }
       ];
 
       const noteLetters = ['C', 'D', 'E', 'F', 'G', 'A', 'B'];
@@ -166,6 +216,8 @@
         'D#': 3,
         'Eb': 3,
         'E': 4,
+        'Fb': 4,
+        'E#': 5,
         'F': 5,
         'F#': 6,
         'Gb': 6,
@@ -176,6 +228,13 @@
         'A#': 10,
         'Bb': 10,
         'B': 11,
+        'Cb': 11,
+        'B#': 0, // Enharmonic to C
+        'C##': 2, // Not used as per requirements
+        'Cbb': -2, // Not used as per requirements
+        'Fb': 4,
+        'E#': 5,
+        'B#': 0,
         'Cb': 11
       };
 
@@ -187,6 +246,7 @@
       let totalQuestions = 0;
       let missedQuestions = {};
 
+      // Function to build the major scale based on root and sharps preference
       function buildMajorScale(root, useSharps) {
         const semitones = [0, 2, 4, 5, 7, 9, 11];
         const scale = [];
@@ -201,17 +261,27 @@
         return scale;
       }
 
+      // Function to find note name based on letter, midi, and sharps preference
       function findNoteName(letter, midi, useSharps) {
-        const accidentals = useSharps ? ['bb', 'b', '', '#', '##'] : ['bb', 'b', '', '#', '##'];
+        const accidentals = useSharps ? ['#', ''] : ['b', ''];
         for (let accidental of accidentals) {
           const noteName = letter + accidental;
-          if (semitoneMap[noteName] !== undefined && semitoneMap[noteName] % 12 === midi) {
+          if (semitoneMap[noteName] !== undefined && (semitoneMap[noteName] % 12 === midi)) {
+            return noteName;
+          }
+        }
+        // Fallback to include double accidentals
+        const allAccidentals = ['##', 'bb'];
+        for (let accidental of allAccidentals) {
+          const noteName = letter + accidental;
+          if (semitoneMap[noteName] !== undefined && (semitoneMap[noteName] % 12 === midi)) {
             return noteName;
           }
         }
         return null;
       }
 
+      // Function to generate triad notes
       function generateTriad(root, formula) {
         const useSharps = !root.includes('b');
         const scale = buildMajorScale(root, useSharps);
@@ -238,14 +308,18 @@
           return note;
         });
 
-        // Verify that we haven't mixed sharps and flats
+        // Removed the following block to allow mixed accidentals in triad notes
+        /*
+        // Verify that we haven't mixed sharps and flats in triad notes
         const hasSharps = notes.some(n => n.includes('#'));
         const hasFlats = notes.some(n => n.includes('b'));
         if (hasSharps && hasFlats) return null;
+        */
 
         return notes;
       }
 
+      // Function to flatten a note (adds a flat or removes a sharp)
       function flattenNote(note) {
         if (note.endsWith('bb')) return note; // Avoid triple flats
         if (note.endsWith('b')) return note.replace('b', 'bb');
@@ -254,6 +328,7 @@
         return note + 'b';
       }
 
+      // Function to sharpen a note (adds a sharp or removes a flat)
       function sharpenNote(note) {
         if (note.endsWith('##')) return note; // Avoid triple sharps
         if (note.endsWith('#')) return note.replace('#', '##');
@@ -262,6 +337,7 @@
         return note + '#';
       }
 
+      // Function to generate all permutations based on inversions and voicing
       function generatePermutations(notes, selectedInversions, spreadVoicing) {
         const permutations = [];
         const inversions = [];
@@ -308,6 +384,7 @@
         }));
       }
 
+      // Heap's algorithm for permutations
       function permute(arr) {
         const result = [];
 
@@ -327,6 +404,7 @@
         return result;
       }
 
+      // Function to check if permutation is a standard inversion
       function isStandardInversion(perm, original) {
         return (
           (perm[0] === original[0] && perm[1] === original[1] && perm[2] === original[2]) ||
@@ -335,6 +413,7 @@
         );
       }
 
+      // Function to initialize the quiz based on user selections
       function initializeQuiz() {
         const selectedTypes = [];
         if (document.getElementById('major').checked) selectedTypes.push('Major');
@@ -356,9 +435,63 @@
           }
         }
 
+        // Get Sharps, Flats, and Naturals selections
+        const selectedSharps = document.getElementById('sharps').checked;
+        const selectedFlats = document.getElementById('flats').checked;
+        const selectedNaturals = document.getElementById('naturals').checked;
+        const selectedTheoreticalEnharmonics = document.getElementById('theoretical-enharmonics').checked;
+        const selectedCircleEnharmonics = document.getElementById('circle-enharmonics').checked;
+
+        let filteredRootNotes = [];
+
+        // Add Naturals if selected
+        if (selectedNaturals) {
+          const naturalRoots = allRootNotes.filter(note => !note.includes('#') && !note.includes('b'));
+          filteredRootNotes = filteredRootNotes.concat(naturalRoots);
+        }
+
+        // Add Sharps if selected
+        if (selectedSharps) {
+          const sharpRoots = allRootNotes.filter(note => note.includes('#'));
+          filteredRootNotes = filteredRootNotes.concat(sharpRoots);
+        }
+
+        // Add Flats if selected
+        if (selectedFlats) {
+          const flatRoots = allRootNotes.filter(note => note.includes('b'));
+          filteredRootNotes = filteredRootNotes.concat(flatRoots);
+        }
+
+        // Add theoretical enharmonics if selected
+        if (selectedTheoreticalEnharmonics) {
+          filteredRootNotes = filteredRootNotes.concat(theoreticalEnharmonics);
+        }
+
+        // Apply Circle of Fifths Enharmonic preferences if selected
+        if (selectedCircleEnharmonics) {
+          filteredRootNotes = filteredRootNotes.map(note => {
+            return circleOfFifthsPreferred[note] || note;
+          });
+        }
+
+        // Remove duplicates
+        filteredRootNotes = [...new Set(filteredRootNotes)];
+
+        // Remove any root notes with double accidentals (as per requirements)
+        filteredRootNotes = filteredRootNotes.filter(note => {
+          return !note.includes('##') && !note.includes('bb');
+        });
+
+        // If no roots match the selection, alert the user and return
+        if (filteredRootNotes.length === 0) {
+          alert('No root notes match the selected accidentals and enharmonic options. Please adjust your selections.');
+          return;
+        }
+
         quizSet = [];
         missedQuestions = {};
-        circleOfFifths.forEach(root => {
+
+        filteredRootNotes.forEach(root => {
           triadTypes.forEach(triadType => {
             if (selectedTypes.includes(triadType.name)) {
               const triadNotes = generateTriad(root, triadType.formula);
@@ -372,7 +505,7 @@
                   inversion: perm.inversion,
                   quizMode: quizMode,
                   key: questionKey,
-                  notes: perm.notes // Store notes for augmented triads
+                  notes: perm.notes // Store notes for reference
                 });
               });
             }
@@ -396,9 +529,17 @@
         document.getElementById('quiz-area').style.display = 'block';
         document.getElementById('missed-list').innerHTML = '';
 
+        // If no questions are available after filtering, alert the user
+        if (quizSet.length === 0) {
+          alert('No questions available based on the selected options. Please adjust your selections.');
+          resetGame();
+          return;
+        }
+
         showNextQuestion();
       }
 
+      // Function to show the next question
       function showNextQuestion() {
         if (quizSet.length === 0) {
           document.getElementById('quiz-question').textContent = 'Quiz Completed!';
@@ -423,6 +564,7 @@
         document.getElementById('progress').textContent = `Correct: ${correctAnswers}, Incorrect Attempts: ${incorrectAttempts}, Remaining Questions: ${quizSet.length}`;
       }
 
+      // Function to reveal the answer
       function revealAnswer() {
         const inversionInfo = `(${currentQuestion.inversion})`;
 
@@ -437,6 +579,7 @@
         document.getElementById('reveal-button').style.display = 'none';
       }
 
+      // Function to handle correct answer
       function handleCorrect() {
         correctAnswers++;
         quizSet.splice(currentQuestionIndex, 1);
@@ -446,6 +589,7 @@
         showNextQuestion();
       }
 
+      // Function to handle wrong answer
       function handleWrong() {
         incorrectAttempts++;
         const key = currentQuestion.key;
@@ -462,6 +606,7 @@
         showNextQuestion();
       }
 
+      // Function to update missed questions list
       function updateMissedQuestions() {
         const missedList = document.getElementById('missed-list');
         missedList.innerHTML = '';
@@ -472,6 +617,7 @@
         }
       }
 
+      // Function to reset the game
       function resetGame() {
         document.getElementById('quiz-area').style.display = 'none';
         document.getElementById('start-button').style.display = 'inline-block';
@@ -485,6 +631,7 @@
         missedQuestions = {};
       }
 
+      // Function to shuffle an array
       function shuffleArray(array) {
         for (let i = array.length - 1; i > 0; i--) {
           const j = Math.floor(Math.random() * (i + 1));
