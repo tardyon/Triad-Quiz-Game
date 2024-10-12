@@ -18,9 +18,18 @@
     }
     .options {
       margin-bottom: 20px;
+      text-align: left; /* Align options to the left */
     }
-    .options label {
-      margin-right: 15px;
+    .options summary {
+      font-size: 1.5em;
+      font-weight: bold;
+      cursor: pointer;
+    }
+    .options details[open] summary::before {
+      content: "▼ ";
+    }
+    .options summary::before {
+      content: "► ";
     }
     #quiz-area {
       margin-top: 20px;
@@ -31,14 +40,22 @@
     }
     #reveal-button, #correct-button, #wrong-button, #reset-button {
       margin: 10px;
-      padding: 20px 30px; /* Increased padding for larger buttons */
-      font-size: 1.5em; /* Larger font size */
+      padding: 15px 25px; /* Adjusted padding for better spacing */
+      font-size: 1.2em; /* Adjusted font size */
       cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #007BFF;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    #reveal-button:hover, #correct-button:hover, #wrong-button:hover, #reset-button:hover {
+      background-color: #0056b3;
     }
     #answer {
       font-size: 2.5em; /* Large font size */
       margin-bottom: 30px;
-      color: blue;
+      color: #28a745;
     }
     #progress {
       margin-top: 20px;
@@ -46,9 +63,17 @@
     }
     #start-button {
       margin-top: 20px;
-      padding: 20px 30px; /* Increased padding for larger button */
-      font-size: 1.5em; /* Larger font size */
+      padding: 15px 25px; /* Adjusted padding for better spacing */
+      font-size: 1.2em; /* Adjusted font size */
       cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #28a745;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    #start-button:hover {
+      background-color: #1e7e34;
     }
     #footer {
       margin-top: 40px;
@@ -62,12 +87,13 @@
       text-align: center;
     }
     input[type="checkbox"], input[type="radio"] {
-      transform: scale(1.5);
+      transform: scale(1.3);
       margin-right: 10px;
     }
     /* Missed Questions Styles */
     #missed-questions {
       margin-top: 20px;
+      text-align: left;
     }
     #missed-questions h2 {
       font-size: 1.5em;
@@ -81,60 +107,156 @@
       font-size: 1.2em;
       margin-bottom: 5px;
     }
+    /* Instructions Toggle Button */
+    #instructions-button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 1em;
+      cursor: pointer;
+      border: none;
+      border-radius: 5px;
+      background-color: #6c757d;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    #instructions-button:hover {
+      background-color: #5a6268;
+    }
+    /* Instructions Manual Styles */
+    #instructions-manual {
+      display: none;
+      text-align: left;
+      margin-top: 20px;
+      padding: 20px;
+      background-color: #ffffff;
+      border: 1px solid #ced4da;
+      border-radius: 5px;
+    }
+    #instructions-manual h2 {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    #instructions-manual p {
+      margin-bottom: 10px;
+    }
+    /* Responsive Design */
+    @media (max-width: 600px) {
+      #quiz-question {
+        font-size: 2em;
+      }
+      #answer {
+        font-size: 2em;
+      }
+      #reveal-button, #correct-button, #wrong-button, #reset-button, #start-button, #instructions-button {
+        padding: 10px 20px;
+        font-size: 1em;
+      }
+      .options summary {
+        font-size: 1.2em;
+      }
+      .options label {
+        font-size: 1em;
+      }
+    }
   </style>
 </head>
 <body>
 
   <div class="container">
-    <h1>Triad Quiz Game v1.5.2</h1>
+    <h1>Triad Quiz Game v1.6.1</h1>
     <p>This game helps you learn and practice identifying the four types of triads.</p>
     <p>If a chord doesn't match the spelling of any of these types, consider choosing a different root note.</p>
     <p>Any change in option selection requires a "Reset Game" to take effect.</p>
     
-    <!-- Triad Types Selection -->
-    <div class="options">
-      <h2>Select Triad Types:</h2>
-      <label><input type="checkbox" id="major" checked> Major</label>
-      <label><input type="checkbox" id="minor" checked> Minor</label>
-      <label><input type="checkbox" id="diminished" checked> Diminished</label>
-      <label><input type="checkbox" id="augmented" checked> Augmented</label>
+    <!-- Instructions Toggle Button -->
+    <button id="instructions-button">Show Instructions</button>
+    
+    <!-- Instructions Manual -->
+    <div id="instructions-manual">
+      <h2>Instructions Manual</h2>
+      <p>Welcome to the Triad Quiz Game! This tool is designed to help you practice and improve your ability to identify and spell different types of triads based on selected root notes and configurations.</p>
+      
+      <h3>How to Use the Quiz:</h3>
+      <ol>
+        <li><strong>Select Triad Selection Options:</strong> Click on the "Triad Selection Options" section to expand it and configure your desired settings.</li>
+        <li><strong>Select Quiz Mode:</strong> Choose between "Name the Chord" or "Spell the Chord" modes by selecting the appropriate radio button.</li>
+        <li><strong>Start the Quiz:</strong> After configuring your options, click the "Start Quiz" button to begin.</li>
+        <li><strong>Interacting with the Quiz:</strong>
+          <ul>
+            <li><em>Reveal Answer:</em> Click the "Reveal Answer" button or press the <strong>Space Bar</strong> to display the correct answer.</li>
+            <li><em>Mark as Correct:</em> If you answered correctly, click "I Was Correct" or press the <strong>'.' Key</strong>.</li>
+            <li><em>Mark as Wrong:</em> If you answered incorrectly, click "I Was Wrong" or press the <strong>',' Key</strong>. Missed questions will be tracked for review.</li>
+          </ul>
+        </li>
+        <li><strong>Resetting the Quiz:</strong> To apply any changes in your selections, click the "Reset Game" button. This will hide the quiz area and bring you back to the initial settings screen.</li>
+      </ol>
+      
+      <h3>Tips for Effective Learning:</h3>
+      <ul>
+        <li>Start with natural root notes to build a strong foundation before introducing sharps and flats.</li>
+        <li>Gradually incorporate theoretical enharmonics and Circle of Fifths preferences to challenge your understanding.</li>
+        <li>Review missed questions to identify areas that need improvement.</li>
+      </ul>
+      
+      <h3>Keyboard Shortcuts:</h3>
+      <ul>
+        <li><strong>Space Bar:</strong> Reveal the answer.</li>
+        <li><strong>'.' Key:</strong> Mark the answer as correct.</li>
+        <li><strong>',' Key:</strong> Mark the answer as wrong.</li>
+      </ul>
     </div>
     
-    <!-- Inversions Selection -->
+    <!-- Triad Selection Options -->
     <div class="options">
-      <h2>Select Inversions:</h2>
-      <label><input type="checkbox" name="inversion" value="root" checked> Root Inversion</label>
-      <label><input type="checkbox" name="inversion" value="first" checked> First Inversion</label>
-      <label><input type="checkbox" name="inversion" value="second" checked> Second Inversion</label>
-    </div>
-    
-    <!-- Voicing Selection -->
-    <div class="options">
-      <h2>Select Voicing:</h2>
-      <label><input type="checkbox" id="spread-voicing"> Spread (Open Chord) Voicing</label>
+      <details>
+        <summary>Triad Selection Options</summary>
+        <!-- Triad Types Selection -->
+        <div class="options">
+          <h3>Select Triad Types:</h3>
+          <label><input type="checkbox" id="major" checked> Major</label>
+          <label><input type="checkbox" id="minor" checked> Minor</label>
+          <label><input type="checkbox" id="diminished" checked> Diminished</label>
+          <label><input type="checkbox" id="augmented" checked> Augmented</label>
+        </div>
+        
+        <!-- Inversions Selection -->
+        <div class="options">
+          <h3>Select Inversions:</h3>
+          <label><input type="checkbox" name="inversion" value="root" checked> Root Inversion</label>
+          <label><input type="checkbox" name="inversion" value="first" checked> First Inversion</label>
+          <label><input type="checkbox" name="inversion" value="second" checked> Second Inversion</label>
+        </div>
+        
+        <!-- Voicing Selection -->
+        <div class="options">
+          <h3>Select Voicing:</h3>
+          <label><input type="checkbox" id="spread-voicing"> Spread (Open Chord) Voicing</label>
+        </div>
+        
+        <!-- Root Note Accidental Selection -->
+        <div class="options">
+          <h3>Select Root Note Accidental:</h3>
+          <label><input type="checkbox" id="naturals"> Naturals</label>
+          <label><input type="checkbox" id="sharps"> Sharps (#)</label>
+          <label><input type="checkbox" id="flats"> Flats (b)</label>
+        </div>
+        
+        <!-- Root Note Enharmonic Options -->
+        <div class="options">
+          <h3>Select Root Note Enharmonic Options:</h3>
+          <label><input type="checkbox" id="theoretical-enharmonics"> Theoretical Enharmonics</label>
+          <label><input type="checkbox" id="circle-enharmonics"> Follow Circle of Fifths Enharmonic</label>
+        </div>
+      </details>
     </div>
     
     <!-- Quiz Mode Selection -->
     <div class="options">
-      <h2>Select Quiz Mode:</h2>
-      <label><input type="radio" name="mode" value="name" checked> Name the Chord</label>
-      <label><input type="radio" name="mode" value="spell"> Spell the Chord</label>
-    </div>
-    
-    <!-- Root Note Accidental Selection -->
-    <div class="options">
-      <h2>Select Root Note Accidental:</h2>
-      <label><input type="checkbox" id="sharps"> Sharps (#)</label>
-      <label><input type="checkbox" id="flats"> Flats (b)</label>
-      <!-- New Naturals Checkbox -->
-      <label><input type="checkbox" id="naturals"> Naturals</label>
-    </div>
-    
-    <!-- Root Note Enharmonic Options -->
-    <div class="options">
-      <h2>Select Root Note Enharmonic Options:</h2>
-      <label><input type="checkbox" id="theoretical-enharmonics"> Theoretical Enharmonics</label>
-      <label><input type="checkbox" id="circle-enharmonics"> Follow Circle of Fifths Enharmonic</label>
+      <details>
+        <summary>Select Quiz Mode</summary>
+        <label><input type="radio" name="mode" value="name" checked> Name the Chord</label>
+        <label><input type="radio" name="mode" value="spell"> Spell the Chord</label>
+      </details>
     </div>
     
     <!-- Start Quiz Button -->
@@ -154,7 +276,7 @@
     <!-- Footer -->
     <div id="footer">
       <p>© 2024 Michael C.M. Varney</p>
-      <p>Version 1.5.2</p>
+      <p>Version 1.6.1</p>
     </div>
 
     <!-- Missed Questions at the Bottom -->
@@ -640,12 +762,26 @@
         return array;
       }
 
+      // Function to toggle instructions manual
+      function toggleInstructions() {
+        const instructions = document.getElementById('instructions-manual');
+        const button = document.getElementById('instructions-button');
+        if (instructions.style.display === 'none' || instructions.style.display === '') {
+          instructions.style.display = 'block';
+          button.textContent = 'Hide Instructions';
+        } else {
+          instructions.style.display = 'none';
+          button.textContent = 'Show Instructions';
+        }
+      }
+
       // Event listeners
       document.getElementById('start-button').addEventListener('click', initializeQuiz);
       document.getElementById('reveal-button').addEventListener('click', revealAnswer);
       document.getElementById('correct-button').addEventListener('click', handleCorrect);
       document.getElementById('wrong-button').addEventListener('click', handleWrong);
       document.getElementById('reset-button').addEventListener('click', resetGame);
+      document.getElementById('instructions-button').addEventListener('click', toggleInstructions);
 
       // Keyboard event listeners
       document.addEventListener('keydown', function(event) {
